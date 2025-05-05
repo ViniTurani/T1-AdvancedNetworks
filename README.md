@@ -43,7 +43,7 @@ xhost +SI:localuser:root
 Executar o experimento:
 
 ```bash
-sudo python experimento.py
+sudo python3 experimento.py
 ```
 
 ## Limpar o ambiente após uma emulação
