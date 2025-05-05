@@ -9,9 +9,9 @@ Simular uma rede com transmissão de vídeo usando RTP entre dois nós, degradar
 Instalar pacotes:
 
 ```bash
-apt-get install mininet
-apt-get install openvswitch-testcontroller
-apt-get install iperf ifstat
+sudo apt-get install mininet
+sudo apt-get install openvswitch-testcontroller
+sudo apt-get install iperf ifstat
 ```
 
 Matar o controlador local:
@@ -26,6 +26,12 @@ Baixar um video de exemplo no computador local:
 
 ```bash
 wget https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4 -O video.mp4
+```
+
+Install ffmpeg:
+
+```bash
+sudo apt-get install ffmpeg
 ```
 
 Para permitir que o player de vídeo (executado como root dentro do Mininet) acesse o sistema de som e exiba janelas na interface gráfica do usuário, é necessário conceder permissão ao usuário root para usar o servidor gráfico. Execute o seguinte comando no terminal antes de iniciar o experimento:
