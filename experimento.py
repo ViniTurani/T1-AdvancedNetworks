@@ -48,11 +48,11 @@ def run():
 
     print("Iniciando ffplay em h2...")
 
-    h2.cmd('ffplay -protocol_whitelist "file,udp,rtp" -fflags nobuffer -flags low_delay -i video.sdp '
+    h2.cmd('ffplay -report -protocol_whitelist "file,udp,rtp" -fflags nobuffer -flags low_delay -i video.sdp '
        '> /tmp/ffplay.log 2>&1 &')
 
     sleep(2)
-    
+
     print("Iniciando monitoramento da interface do link s1 <-> s2...")
     monitor = s1.popen('ifstat -i s1-eth3 0.5', stdout=sys.stdout)
 
