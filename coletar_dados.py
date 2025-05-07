@@ -23,9 +23,9 @@ class RTPTopo(Topo):
         # Links de 10 Mbit entre nós
         self.addLink(h1, s1, cls=TCLink, bw=10)
         self.addLink(h3, s1, cls=TCLink, bw=10)
+        self.addLink(s1, s2, cls=TCLink, bw=10)
         self.addLink(h2, s2, cls=TCLink, bw=10)
         self.addLink(h4, s2, cls=TCLink, bw=10)
-        self.addLink(s1, s2, cls=TCLink, bw=10)
 
 
 def show_tc_config(switch, iface):
@@ -36,13 +36,17 @@ def show_tc_config(switch, iface):
 
 
 def apply_htb_reserve_qos(switch, iface):
+    # opcional: prioridade absoluta para RTP antes do HTB (pode comentar)
     switch.cmd(f"tc qdisc add dev {iface} parent 5:1 handle 10: prio bands 3")
     switch.cmd(
-        f"tc filter add dev {iface} protocol ip parent 10: prio 1 u32 match ip dport 5004 0xffff flowid 10:1"
+        f"tc filter add dev {iface} protocol ip parent 10: prio 1 u32 "
+        f"match ip dport 5004 0xffff flowid 10:1"
     )
     switch.cmd(
-        f"tc filter add dev {iface} protocol ip parent 10: prio 1 u32 match ip dport 5006 0xffff flowid 10:1"
+        f"tc filter add dev {iface} protocol ip parent 10: prio 1 u32 "
+        f"match ip dport 5006 0xffff flowid 10:1"
     )
+
     # Qdisc root HTB
     switch.cmd(f"tc qdisc add dev {iface} root handle 1: htb default 2")
 
@@ -61,9 +65,10 @@ def apply_htb_reserve_qos(switch, iface):
         f"tc class add dev {iface} parent 1:0 classid 1:2 "
         f"htb rate 4mbit ceil 4mbit burst 15k cburst 15k"
     )
+    # SFQ para fairness entre fluxos best-effort
     switch.cmd(f"tc qdisc add dev {iface} parent 1:2 handle 20: sfq perturb 10")
 
-    # Filtros RTP → 1:1
+    # Filtros RTP → classe 1:1
     for port in (5004, 5006):
         switch.cmd(
             f"tc filter add dev {iface} protocol ip parent 1:0 prio 1 u32 "
@@ -74,34 +79,33 @@ def apply_htb_reserve_qos(switch, iface):
 def run():
     topo = RTPTopo()
     net = Mininet(
-        topo=topo, link=TCLink, switch=OVSKernelSwitch, controller=DefaultController
+        topo=topo,
+        link=TCLink,
+        switch=OVSKernelSwitch,
+        controller=DefaultController,
     )
     net.start()
 
     h1, h2, h3, h4 = net.get("h1", "h2", "h3", "h4")
     s1, s2 = net.get("s1", "s2")
 
-    # -----------------------------------------
-    # 0) Inicia coleta de métricas independente
-    # -----------------------------------------
+    # 0) Inicia coleta de métricas
     print("Iniciando coleta de métricas...")
-    # Throughput RTP → se salva em arquivo
+    # Agregado no switch
     s1.cmd("ifstat -i s1-eth3 0.5 > s1-eth3-ifstat.txt 2>&1 &")
-    # Captura RTP em pcap para jitter e stalls
+    # Apenas RTP no host receptor
+    h2.cmd("ifstat -i h2-eth0 0.5 > h2-eth0-ifstat.txt 2>&1 &")
+    # Captura RTP para jitter e stalls
     h2.cmd("tcpdump -i h2-eth0 udp port 5004 or port 5006 -w /tmp/rtp.pcap &")
-    # Servidor iperf UDP para background
+    # Servidor iperf UDP
     h4.cmd("iperf -s -u > /tmp/iperf_server.log 2>&1 &")
 
-    # -----------------------------------------
-    # 1) (Opcional) QoS — se quiser testar sem, comente a próxima linha
-    # -----------------------------------------
+    # 1) Aplica QoS (comente se quiser sem reserva)
     print("Aplicando QoS: reserva 6Mbit para RTP no link s1-eth3...")
-    apply_htb_reserve_qos(s1, "s1-eth3")
+    # apply_htb_reserve_qos(s1, "s1-eth3")
     show_tc_config(s1, "s1-eth3")
 
-    # -----------------------------------------
-    # 2) Preparação e início do streaming RTP
-    # -----------------------------------------
+    # 2) Inicia streaming RTP
     print("Preparando vídeo em h1...")
     h1.cmd(
         "if [ ! -f video.mp4 ]; then "
@@ -128,9 +132,9 @@ def run():
     )
     sleep(2)
 
-    # -----------------------------------------
-    # 3) Gera tráfego de fundo com iperf em CSV
-    # -----------------------------------------
+    sleep(10)
+
+    # 3) Gera tráfego de fundo com iperf
     num_streams = 3
     duration = 20
     print(f"Iniciando {num_streams} fluxos iperf UDP (-i 1 -y C) por {duration}s...")
@@ -140,18 +144,17 @@ def run():
             f"-i 1 -y C > iperf_{i}.csv 2> iperf_{i}.err &"
         )
 
-    # espera coleta simultânea de RTP e UDP
+    # Espera coleta simultânea
     sleep(duration + 40)
 
-    # -----------------------------------------
     # 4) Finaliza coletas
-    # -----------------------------------------
     print("Parando coleta de métricas e rede...")
     s1.cmd('pkill -f "ifstat -i s1-eth3"')
+    h2.cmd('pkill -f "ifstat -i h2-eth0"')
     h2.cmd('pkill -f "tcpdump -i h2-eth0"')
     h4.cmd('pkill -f "iperf -s -u"')
 
-    # Extrai jitter RTP e timestamps de chegada (para detectar stalls)
+    # Extrai jitter e timestamps para stalls
     h2.cmd(
         "tshark -r /tmp/rtp.pcap "
         "-T fields -E separator=, -e frame.time_relative -e rtp.jitter "
