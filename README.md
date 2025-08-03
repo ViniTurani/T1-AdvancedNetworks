@@ -1,12 +1,12 @@
-# Emulação de rede com Mininet
+# Network Emulation with Mininet
 
-## Objetivo
+## Objective
 
-Simular uma rede com transmissão de vídeo usando RTP entre dois nós, degradar a qualidade com tráfego iperf, e depois aplicar QoS para preservar a qualidade do vídeo. Este roteiro foi elaborado para computadores com Ubuntu Linux ou outras distribuições baseadas em Debian. Caso necessário, recomenda-se utilizar uma [máquina virtual](https://www.osboxes.org/ubuntu/#ubuntu-24-04-vbox) com Ubuntu 24.04 para VirtualBox.
+Simulate a network with video transmission using RTP between two nodes, degrade video quality using `iperf` traffic, and then apply QoS to preserve video quality. This guide is intended for computers running Ubuntu Linux or other Debian-based distributions. If needed, we recommend using a [virtual machine](https://www.osboxes.org/ubuntu/#ubuntu-24-04-vbox) with Ubuntu 24.04 for VirtualBox.
 
-## Instalar Mininet
+## Install Mininet
 
-Instalar pacotes:
+Install the required packages:
 
 ```bash
 sudo apt-get install mininet
@@ -14,15 +14,15 @@ sudo apt-get install openvswitch-testcontroller
 sudo apt-get install iperf ifstat
 ```
 
-Matar o controlador local:
+Kill the local controller:
 
 ```bash
 sudo killall ovs-testcontroller
 ```
 
-## Testar streaming de video via RTP
+## Test video streaming via RTP
 
-Baixar um video de exemplo no computador local:
+Download a sample video to the local machine:
 
 ```bash
 wget https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4 -O video.mp4
@@ -34,29 +34,29 @@ Install ffmpeg:
 sudo apt-get install ffmpeg
 ```
 
-Para permitir que o player de vídeo (executado como root dentro do Mininet) acesse o sistema de som e exiba janelas na interface gráfica do usuário, é necessário conceder permissão ao usuário root para usar o servidor gráfico. Execute o seguinte comando no terminal antes de iniciar o experimento:
+To allow the video player (executed as root inside Mininet) to access the sound system and display windows on the user interface, it is necessary to grant root user permission to use the X server. Run the following command in the terminal before starting the experiment:
 
 ```bash
 xhost +SI:localuser:root
 ```
 
-Executar o experimento:
+Run the experiment:
 
 ```bash
 sudo python3 experimento.py
 ```
 
-## Limpar o ambiente após uma emulação
+## Clean up the environment after emulation
 
-Quando o mininet é interrompido bruscamente pode ser necessário realizar o um `cleanup` do ambiente.
+When Mininet is abruptly stopped, it may be necessary to perform a cleanup of the environment.
 
-Execute este comando para limpar interfaces virtuais, bridges e processos Mininet antigos:
+Run this command to remove virtual interfaces, bridges, and lingering Mininet processes:
 
 ```bash
 sudo mn -c
 ```
 
-## Referências:
+## References:
 
-- Get Started With Mininet: https://mininet.org/download/
+- Get Started With Mininet: https://mininet.org/download/  
 - Ubuntu 24.04 Virtual Machine: https://www.osboxes.org/ubuntu/#ubuntu-24-04-VirtualBox
